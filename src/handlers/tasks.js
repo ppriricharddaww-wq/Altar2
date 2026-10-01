@@ -1,9 +1,30 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// TASKS & LEVELS HANDLERS
+// TASKS & LEVELS HANDLERS (FIXED: camelCase mapping)
 // ═══════════════════════════════════════════════════════════════════════════════
 const db = require('../db');
 const { calculatePointsRequired, getStageName, SeededRandom } = require('../utils');
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPER: Convert DB task (snake_case) to Frontend task (camelCase)
+// ═══════════════════════════════════════════════════════════════════════════════
+function mapTaskForFrontend(t) {
+  return {
+    taskID: t.task_id,
+    level: t.level_number,
+    points: t.points,
+    descriptionAR: t.description_ar,
+    descriptionEN: t.description_en,
+    verificationType: t.verification_type,
+    verificationAnswer: t.verification_answer,
+    punishment: t.punishment,
+    reward: t.reward,
+    mediaRequired: t.media_required
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET LEVEL
+// ═══════════════════════════════════════════════════════════════════════════════
 async function getLevel(params) {
   const levelNum = parseInt(params.level) || 1;
   const userId = params.userId || '';
@@ -14,14 +35,18 @@ async function getLevel(params) {
 
   await ensureLevelTasks(levelNum);
 
-  const tasks = await db.getTasksForLevel(levelNum);
+  const rawTasks = await db.getTasksForLevel(levelNum);
+  // ✅ التحويل إلى camelCase لتطابق الواجهة الأمامية
+  const tasks = rawTasks.map(mapTaskForFrontend);
   const pointsRequired = calculatePointsRequired(levelNum);
 
   let completedTasks = [];
   if (userId) {
     const user = await db.findUserById(userId);
     if (user && user.completed_tasks) {
-      completedTasks = user.completed_tasks.split(',').filter(t => t.startsWith('lv' + levelNum + '_'));
+      completedTasks = user.completed_tasks
+        .split(',')
+        .filter(t => t.startsWith('lv' + levelNum + '_'));
     }
   }
 
@@ -36,6 +61,9 @@ async function getLevel(params) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// SUBMIT TASK
+// ═══════════════════════════════════════════════════════════════════════════════
 async function submitTask(params) {
   const { userId, taskId, answer, level: levelStr } = params;
   const levelNum = parseInt(levelStr) || 1;
@@ -52,8 +80,8 @@ async function submitTask(params) {
   }
 
   await ensureLevelTasks(levelNum);
-  const tasks = await db.getTasksForLevel(levelNum);
-  const task = tasks.find(t => t.task_id === taskId);
+  const rawTasks = await db.getTasksForLevel(levelNum);
+  const task = rawTasks.find(t => t.task_id === taskId);
   if (!task) return { success: false, message: 'Task not found' };
 
   const completed = user.completed_tasks ? user.completed_tasks.split(',') : [];
@@ -100,6 +128,9 @@ async function submitTask(params) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENSURE LEVEL TASKS (يُنشئ المهام إن لم تكن موجودة)
+// ═══════════════════════════════════════════════════════════════════════════════
 async function ensureLevelTasks(levelNum) {
   const existing = await db.getTasksForLevel(levelNum);
   if (existing.length > 0) return;
