@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: altar-of-souls-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: MISTRESS_CHAT_ID
+        sync: false
+      - key: CHANNEL_ID
+        sync: false
+      - key: MASTER_PASSWORD
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
