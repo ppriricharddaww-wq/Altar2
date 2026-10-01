@@ -228,8 +228,8 @@ async function runSelfTest() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // START SERVER
 // ═══════════════════════════════════════════════════════════════════════════════
-const PORT = config.PORT;
-app.listen(PORT, () => {
+const PORT = process.env.PORT || config.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
   console.log('🔥 The Altar of Souls v3.0 running on port ' + PORT);
   console.log('📡 Webhook URL: ' + config.FRONTEND_URL);
 });
