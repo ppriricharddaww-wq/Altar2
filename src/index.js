@@ -16,9 +16,39 @@ const { calculatePointsRequired, getStageName, generateUploadToken } = require('
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: config.FRONTEND_URL }));
 
-// Health check
+// ═══════════════════════════════════════════════════════════════════════════════
+// CORS CONFIGURATION (FIXED)
+// ═══════════════════════════════════════════════════════════════════════════════
+// استخدام دالة ديناميكية للتحقق من الأصل، مع إزالة الشرطة المائلة من كلا الطرفين
+const allowedOrigins = [
+  config.FRONTEND_URL ? config.FRONTEND_URL.replace(/\/$/, '') : '',
+  'https://subhells.blogspot.com',
+  'https://www.subhells.blogspot.com'
+].filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // السماح بالطلبات التي ليس لها أصل (مثل Postman)
+    if (!origin) return callback(null, true);
+    // إزالة الشرطة المائلة من الأصل القادم
+    const cleanOrigin = origin.replace(/\/$/, '');
+    // التحقق من القائمة المسموحة
+    if (allowedOrigins.includes(cleanOrigin)) {
+      return callback(null, true);
+    }
+    // في بيئة التطوير، اسمح بكل شيء (اختياري)
+    // return callback(null, true);
+    return callback(new Error('Not allowed by CORS: ' + origin));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HEALTH CHECK
+// ═══════════════════════════════════════════════════════════════════════════════
 app.get('/', (req, res) => {
   res.json({ status: 'The Altar of Souls v3.0', timestamp: new Date().toISOString() });
 });
@@ -69,10 +99,24 @@ app.get('/api', async (req, res) => {
     result = { success: false, message: err.message };
   }
 
-  const js = `${callback || 'callback'}(${JSON.stringify(result)});`;
-  res.set('Content-Type', 'application/javascript; charset=utf-8');
-  res.send(js);
+  // إذا طلب JSONP (يوجد callback)، نُعيد JavaScript
+  if (callback) {
+    const js = `${callback}(${JSON.stringify(result)});`;
+    res.set('Content-Type', 'application/javascript; charset=utf-8');
+    return res.send(js);
+  }
+
+  // وإلا نُعيد JSON عادي (لـ fetch)
+  res.set('Content-Type', 'application/json; charset=utf-8');
+  res.json(result);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FILE UPLOAD (POST /api/upload)
+// ═══════════════════════════════════════════════════════════════════════════════
+// ملاحظة: هذا الجزء يفترض أنك تستخدم multer أو ما شابه لمعالجة FormData
+// إذا لم يكن موجوداً في مشروعك، يمكنك حذفه والاعتماد على نقطة النهاية القديمة
+// ═══════════════════════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADDITIONAL API HANDLERS
@@ -232,4 +276,5 @@ const PORT = process.env.PORT || config.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log('🔥 The Altar of Souls v3.0 running on port ' + PORT);
   console.log('📡 Webhook URL: ' + config.FRONTEND_URL);
+  console.log('🌐 Allowed origins:', allowedOrigins.join(', '));
 });
