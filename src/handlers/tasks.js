@@ -116,24 +116,17 @@ async function submitTask(params) {
   });
 
   const pointsRequired = calculatePointsRequired(levelNum);
-  let leveledUp = false;
-  let newLevel = levelNum;
+const canLevelUp = newPoints >= pointsRequired && levelNum < 1000;
 
-  if (newPoints >= pointsRequired && levelNum < 1000) {
-    newLevel = levelNum + 1;
-    await db.updateUser(userId, { level: newLevel });
-    leveledUp = true;
-  }
-
-  return {
-    success: true,
-    message: 'Task completed',
-    pointsEarned: task.points,
-    totalPoints: newPoints,
-    leveledUp,
-    newLevel,
-    pointsRequired: leveledUp ? calculatePointsRequired(newLevel) : pointsRequired
-  };
+return {
+  success: true,
+  message: 'Task completed',
+  pointsEarned: task.points,
+  totalPoints: newPoints,
+  canLevelUp: canLevelUp,  // ✅ جديد: هل يمكنه الترقية؟
+  pointsRequired: pointsRequired,
+  currentLevel: levelNum
+};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
