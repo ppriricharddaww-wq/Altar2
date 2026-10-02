@@ -40,12 +40,20 @@ async function getLevel(params) {
   const pointsRequired = calculatePointsRequired(levelNum);
 
   let completedTasks = [];
+  let pendingTasks = [];  // ✅ جديد: المهام قيد المراجعة
   if (userId) {
     const user = await db.findUserById(userId);
     if (user && user.completed_tasks) {
       completedTasks = user.completed_tasks
         .split(',')
         .filter(t => t.startsWith('lv' + levelNum + '_'));
+    }
+    // ✅ جلب المهام قيد المراجعة من جدول reviews
+    const pending = await db.getPendingReviewsByUser(userId);
+    if (pending) {
+      pendingTasks = pending
+        .filter(r => r.task_id && r.task_id.startsWith('lv' + levelNum + '_'))
+        .map(r => r.task_id);
     }
   }
 
@@ -55,6 +63,7 @@ async function getLevel(params) {
     tasks,
     pointsRequired,
     completedTasks,
+    pendingTasks,  // ✅ جديد
     stage: Math.ceil(levelNum / 10),
     stageName: getStageName(Math.ceil(levelNum / 10))
   };
