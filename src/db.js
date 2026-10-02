@@ -115,13 +115,13 @@ async function getCustomTasksForLevel(levelNum) {
 // ⚠️ تحقق من اسم الجدول: 'reviews' أم 'pending_reviews'؟
 // الكود يستخدم 'reviews' هنا، إن كان جدولك اسمه مختلفاً غيّره
 async function createReview(review) {
-  const { data, error } = await supabase.from('').insert([review]).select().single();
+  const { data, error } = await supabase.from('pending_reviews').insert([review]).select().single();
   return error ? null : data;
 }
 
 async function findReviewById(reviewId) {
   const { data, error } = await supabase
-    .from('')
+    .from('pending_reviews')
     .select('*')
     .eq('review_id', reviewId)
     .single();
@@ -130,7 +130,7 @@ async function findReviewById(reviewId) {
 
 async function updateReview(reviewId, updates) {
   const { data, error } = await supabase
-    .from('')
+    .from('pending_reviews')
     .update(updates)
     .eq('review_id', reviewId)
     .select()
@@ -140,7 +140,7 @@ async function updateReview(reviewId, updates) {
 
 async function getPendingReviews() {
   const { data, error } = await supabase
-    .from('')
+    .from('pending_reviews')
     .select('*')
     .eq('status', 'pending')
     .order('timestamp', { ascending: false });
@@ -151,7 +151,7 @@ async function getPendingReviews() {
 async function getPendingReviewsByUser(userId) {
   try {
     const { data, error } = await supabase
-      .from('')
+      .from('pending_reviews')
       .select('*')
       .eq('user_id', userId)
       .eq('status', 'pending');
