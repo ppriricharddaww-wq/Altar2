@@ -1,4 +1,133 @@
 // ═══════════════════════════════════════════════════════════════════════════════
+// TASKS & LEVELS HANDLERS (مع دعم المهام المخصصة)
+// ═══════════════════════════════════════════════════════════════════════════════
+const db = require('../db');
+const { calculatePointsRequired, getStageName, SeededRandom } = require('../utils');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPER: Convert DB task (snake_case) to Frontend task (camelCase)
+// ═══════════════════════════════════════════════════════════════════════════════
+function mapTaskForFrontend(t) {
+  return {
+    taskID: t.task_id,
+    level: t.level_number,
+    points: t.points,
+    descriptionAR: t.description_ar,
+    descriptionEN: t.description_en,
+    verificationType: t.verification_type,
+    verificationAnswer: t.verification_answer,
+    punishment: t.punishment,
+    reward: t.reward,
+    mediaRequired: t.media_required
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET LEVEL
+// ═══════════════════════════════════════════════════════════════════════════════
+async function getLevel(params) {
+  const levelNum = parseInt(params.level) || 1;
+  const userId = params.userId || '';
+
+  if (levelNum < 1 || levelNum > 1000) {
+    return { success: false, message: 'Invalid level' };
+  }
+
+  await ensureLevelTasks(levelNum);
+
+  const rawTasks = await db.getTasksForLevel(levelNum);
+  const tasks = rawTasks.map(mapTaskForFrontend);
+  const pointsRequired = calculatePointsRequired(levelNum);
+
+  let completedTasks = [];
+  if (userId) {
+    const user = await db.findUserById(userId);
+    if (user && user.completed_tasks) {
+      completedTasks = user.completed_tasks
+        .split(',')
+        .filter(t => t.startsWith('lv' + levelNum + '_'));
+    }
+  }
+
+  return {
+    success: true,
+    level: levelNum,
+    tasks,
+    pointsRequired,
+    completedTasks,
+    stage: Math.ceil(levelNum / 10),
+    stageName: getStageName(Math.ceil(levelNum / 10))
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SUBMIT TASK
+// ═══════════════════════════════════════════════════════════════════════════════
+async function submitTask(params) {
+  const { userId, taskId, answer, level: levelStr } = params;
+  const levelNum = parseInt(levelStr) || 1;
+
+  if (!userId || !taskId) {
+    return { success: false, message: 'Missing parameters' };
+  }
+
+  const user = await db.findUserById(userId);
+  if (!user) return { success: false, message: 'User not found' };
+
+  if (user.banned_until && new Date(user.banned_until) > new Date()) {
+    return { success: false, message: 'Account banned until ' + user.banned_until, banned: true };
+  }
+
+  await ensureLevelTasks(levelNum);
+  const rawTasks = await db.getTasksForLevel(levelNum);
+  const task = rawTasks.find(t => t.task_id === taskId);
+  if (!task) return { success: false, message: 'Task not found' };
+
+  const completed = user.completed_tasks ? user.completed_tasks.split(',') : [];
+  if (completed.includes(taskId)) {
+    return { success: false, message: 'Task already completed' };
+  }
+
+  if (task.verification_type === 'media') {
+    return { success: false, message: 'Proof upload required for this task', requiresMedia: true };
+  }
+
+  if (task.verification_answer && task.verification_type !== 'game' && task.verification_type !== 'choice') {
+    if ((answer || '').trim().toLowerCase() !== String(task.verification_answer).toLowerCase()) {
+      return { success: false, message: 'Incorrect answer', correct: false };
+    }
+  }
+
+  const newCompleted = completed.length > 0 ? user.completed_tasks + ',' + taskId : taskId;
+  const newPoints = (user.points || 0) + (task.points || 10);
+
+  await db.updateUser(userId, {
+    completed_tasks: newCompleted,
+    points: newPoints
+  });
+
+  const pointsRequired = calculatePointsRequired(levelNum);
+  let leveledUp = false;
+  let newLevel = levelNum;
+
+  if (newPoints >= pointsRequired && levelNum < 1000) {
+    newLevel = levelNum + 1;
+    await db.updateUser(userId, { level: newLevel });
+    leveledUp = true;
+  }
+
+  return {
+    success: true,
+    message: 'Task completed',
+    pointsEarned: task.points,
+    totalPoints: newPoints,
+    leveledUp,
+    newLevel,
+    pointsRequired: leveledUp ? calculatePointsRequired(newLevel) : pointsRequired
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ENSURE LEVEL TASKS (مع دعم المهام المخصصة)
 // ═══════════════════════════════════════════════════════════════════════════════
 async function ensureLevelTasks(levelNum) {
@@ -29,11 +158,11 @@ async function ensureLevelTasks(levelNum) {
       });
     }
 
-    return; // ✅ انتهى: استخدمنا المهام المخصصة
+    return;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 3. إذا لم توجد مهام مخصصة، استخدم التوليد التلقائي (الكود الأصلي)
+  // 3. التوليد التلقائي
   // ═══════════════════════════════════════════════════════════════════════════
   console.log('[ensureLevelTasks] Auto-generating tasks for level ' + levelNum);
 
@@ -115,3 +244,8 @@ async function ensureLevelTasks(levelNum) {
     });
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXPORTS (⚠️ هذا السطر ضروري جداً)
+// ═══════════════════════════════════════════════════════════════════════════════
+module.exports = { getLevel, submitTask };
