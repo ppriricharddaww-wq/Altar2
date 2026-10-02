@@ -156,3 +156,26 @@ module.exports = {
   logErrorDB,
   getLeaderboard
 };
+// ═══════════════════════════════════════════════════════════════════════════════
+// جلب المهام المخصصة لمستوى معين (من جدول custom_tasks)
+// ═══════════════════════════════════════════════════════════════════════════════
+async function getCustomTasksForLevel(levelNum) {
+  try {
+    const { data, error } = await supabase
+      .from('custom_tasks')
+      .select('*')
+      .eq('level_number', levelNum)
+      .eq('active', true)
+      .order('task_index', { ascending: true });
+
+    if (error) {
+      console.error('[getCustomTasksForLevel] Error:', error.message);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('[getCustomTasksForLevel] Exception:', err.message);
+    return [];
+  }
+}
