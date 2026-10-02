@@ -231,7 +231,7 @@ async function getLeaderboard(limit = 20) {
 async function getPendingReviewsByUser(userId) {
   try {
     const { data, error } = await supabase
-      .from('reviews')
+      .from('pending_reviews')
       .select('*')
       .eq('user_id', userId)
       .eq('status', 'pending');
