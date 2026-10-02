@@ -92,13 +92,53 @@ async function handleMediaUpload(message) {
     fileId = message.document.file_id;
   }
 
+  // ✅ NEW: Get slave's caption (if any)
+  const slaveCaption = message.caption || '';
+
+  // ✅ NEW: Fetch task details from DB
+  let taskDescAr = 'غير متوفر';
+  let taskDescEn = 'N/A';
+  let taskPunishment = 'غير متوفر';
+  let taskReward = 'غير متوفر';
+  let taskPoints = 0;
+  
+  try {
+    const taskMatch = token.task_id.match(/lv(\d+)_/);
+    if (taskMatch) {
+      const levelNum = parseInt(taskMatch[1]);
+      const tasks = await db.getTasksForLevel(levelNum);
+      const task = tasks.find(t => t.task_id === token.task_id);
+      if (task) {
+        taskDescAr = task.description_ar || 'غير متوفر';
+        taskDescEn = task.description_en || 'N/A';
+        taskPunishment = task.punishment || 'غير متوفر';
+        taskReward = task.reward || 'غير متوفر';
+        taskPoints = task.points || 0;
+      }
+    }
+  } catch (e) {
+    console.log('[task fetch] failed:', e.message);
+  }
+
   const reviewId = 'R' + Date.now();
   const now = new Date().toISOString();
 
-  const caption = '🔍 <b>New Proof Review</b>\n\n' +
-                  '👤 <b>Slave:</b> ' + token.user_id + '\n' +
-                  '📋 <b>Task:</b> ' + token.task_id + '\n' +
-                  '🆔 <b>Review ID:</b> <code>' + reviewId + '</code>';
+  // ✅ NEW: Build rich caption
+  const caption = 
+    '🔍 <b>NEW PROOF SUBMISSION</b>\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '👤 <b>Slave ID:</b> <code>' + token.user_id + '</code>\n' +
+    '📋 <b>Task ID:</b> <code>' + token.task_id + '</code>\n' +
+    '💰 <b>Points:</b> ' + taskPoints + '\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '📝 <b>Task Description (AR):</b>\n' + taskDescAr + '\n\n' +
+    '📝 <b>Task Description (EN):</b>\n' + taskDescEn + '\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '⚠️ <b>Original Punishment:</b>\n' + taskPunishment + '\n\n' +
+    '🏆 <b>Reward:</b>\n' + taskReward + '\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    (slaveCaption ? '💬 <b>Slave\'s Note:</b>\n' + slaveCaption + '\n' + '━━━━━━━━━━━━━━━━━━━━\n' : '') +
+    '🆔 <b>Review ID:</b> <code>' + reviewId + '</code>';
 
   const inlineKeyboard = {
     inline_keyboard: [[
@@ -137,7 +177,7 @@ async function handleMediaUpload(message) {
   try {
     const fileJson = await tg.getFile(fileId);
     if (fileJson.ok) {
-      directUrl = 'https://api.telegram.org/file/bot' + config.BOT_TOKEN + '/' + fileJson.result.file_path;
+      directUrl = 'https://api.telegram.org/bot' + config.BOT_TOKEN + '/' + fileJson.result.file_path;
     }
   } catch (e) { console.log('[getFile] failed:', e.message); }
 
@@ -151,7 +191,8 @@ async function handleMediaUpload(message) {
     slave_chat_id: String(chatId),
     status: 'pending',
     timestamp: now,
-    channel_message_id: String(channelMsgId)
+    channel_message_id: String(channelMsgId),
+    slave_caption: slaveCaption  // ✅ عمود جديد
   });
 
   await db.updateToken(token.token, { used: true });
@@ -164,28 +205,3 @@ async function handleMediaUpload(message) {
     await tg.notifyMistress('📎 New Proof\nReview: ' + reviewId + '\nSlave: ' + token.user_id);
   }
 }
-
-async function handleCallbackQuery(callbackQuery) {
-  const data = callbackQuery.data || '';
-  const fromId = callbackQuery.from.id;
-  const queryId = callbackQuery.id;
-
-  // Security: only Mistress
-  if (String(fromId) !== String(config.MISTRESS_CHAT_ID)) {
-    return tg.answerCallbackQuery(queryId, '⛔ Unauthorized. Only Mistress can review.', true);
-  }
-
-  const parts = data.split(':');
-  const action = parts[0] === 'A' ? 'accept' : 'reject';
-  const reviewId = parts[1];
-
-  const result = await reviews.processReview(reviewId, action, 'Mistress');
-
-  const answerText = result.success
-    ? (action === 'accept' ? '✅ Approved & points added' : '❌ Rejected & penalty applied')
-    : '⚠️ ' + result.message;
-
-  return tg.answerCallbackQuery(queryId, answerText);
-}
-
-module.exports = { handleWebhook };
