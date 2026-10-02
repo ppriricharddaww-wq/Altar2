@@ -228,7 +228,25 @@ async function getLeaderboard(limit = 20) {
     .limit(limit);
   return error ? [] : data;
 }
+async function getPendingReviewsByUser(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'pending');
 
+    if (error) {
+      console.error('[getPendingReviewsByUser] Error:', error.message);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('[getPendingReviewsByUser] Exception:', err.message);
+    return [];
+  }
+}
 // ═══════════════════════════════════════════════════════════════════════════════
 // EXPORTS (⚠️ مرة واحدة فقط، في نهاية الملف)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -258,6 +276,7 @@ module.exports = {
   findActiveTokenByChatId,
   // Logs
   logErrorDB,
+  getPendingReviewsByUser,
   // Leaderboard
   getLeaderboard
 };
