@@ -76,6 +76,7 @@ app.get('/api', async (req, res) => {
 
   try {
     switch (action) {
+      case 'levelUp': result = await levelUpUser(req.query); break;
       case 'signup': result = await auth.signup(req.query); break;
       case 'login': result = await auth.login(req.query); break;
       case 'getLevel': result = await tasks.getLevel(req.query); break;
@@ -236,7 +237,43 @@ async function getUploadLink(params) {
     deepLink: 'https://t.me/' + botUsername + '?start=UPLOAD_' + token
   };
 }
+async function levelUpUser(params) {
+  const { userId, masterPassword } = params;
+  
+  if (!userId) return { success: false, message: 'Missing userId' };
 
+  const user = await db.findUserById(userId);
+  if (!user) return { success: false, message: 'User not found' };
+
+  const currentLevel = user.level || 1;
+  if (currentLevel >= 1000) {
+    return { success: false, message: 'Max level reached' };
+  }
+
+  const pointsRequired = Math.floor(10 + (currentLevel * 1.5));
+  const currentPoints = user.points || 0;
+
+  if (currentPoints < pointsRequired) {
+    return { success: false, message: 'Not enough points', pointsRequired, currentPoints };
+  }
+
+  const newLevel = currentLevel + 1;
+  const newPoints = currentPoints - pointsRequired;  // ✅ خصم النقاط عند الترقية
+
+  await db.updateUser(userId, {
+    level: newLevel,
+    points: newPoints,
+    completed_tasks: ''  // ✅ إعادة تعيين المهام للمستوى الجديد
+  });
+
+  return {
+    success: true,
+    message: 'Leveled up to ' + newLevel,
+    newLevel: newLevel,
+    newPoints: newPoints,
+    pointsRequired: Math.floor(10 + (newLevel * 1.5))
+  };
+}
 async function runSelfTest() {
   const results = {
     timestamp: new Date().toISOString(),
