@@ -48,16 +48,15 @@ async function processReview(reviewId, action, reviewerId) {
   const taskPoints = task ? task.points : 10;
 
   if (action === 'accept') {
-    const currentPoints = user.points || 0;
-    const newPoints = currentPoints + taskPoints;
-    const completedStr = user.completed_tasks || '';
-    const newCompleted = completedStr ? completedStr + ',' + taskId : taskId;
+  const currentPoints = user.points || 0;
+  const newPoints = currentPoints + taskPoints;
+  const completedStr = user.completed_tasks || '';
+  const newCompleted = completedStr ? completedStr + ',' + taskId : taskId;
 
-    await db.updateUser(userId, { completed_tasks: newCompleted, points: newPoints });
+  await db.updateUser(userId, { completed_tasks: newCompleted, points: newPoints });
 
-    const pointsRequired = Math.floor(10 + (levelNum * 1.5));
-    let leveledUp = false;
-    let newLevel = levelNum;
+  const pointsRequired = Math.floor(10 + (levelNum * 1.5));
+  const canLevelUp = newPoints >= pointsRequired && levelNum < 1000;
 
     if (newPoints >= pointsRequired && levelNum < 1000) {
       newLevel = levelNum + 1;
@@ -119,7 +118,13 @@ async function processReview(reviewId, action, reviewerId) {
 
     await tg.notifyMistress('❌ Proof Rejected\n\nSlave: ' + userId + '\nTask: ' + taskId + '\nPenalty: -' + penalty + (banned ? '\nBANNED 6 hours' : ''));
 
-    return { success: true, message: 'Task rejected. Penalty: -' + penalty, penalty, totalPoints: newPoints, banned, bannedUntil };
+    return { ssuccess: true, 
+    message: 'Task approved', 
+    pointsEarned: taskPoints, 
+    totalPoints: newPoints, 
+    canLevelUp: canLevelUp,  // ✅ جديد
+    pointsRequired: pointsRequired,
+    currentLevel: levelNum };
   }
 }
 
