@@ -45,11 +45,28 @@ async function getTasksForLevel(levelNum) {
   return error ? [] : data;
 }
 
-async function createLevelTask(task) {
-  const { error } = await supabase.from('levels').insert([task]);
-  return !error;
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// إنشاء مهمة جديدة في جدول tasks
+// ═══════════════════════════════════════════════════════════════════════════════
+async function createLevelTask(taskData) {
+  try {
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([taskData])
+      .select()
+      .single();
 
+    if (error) {
+      console.error('[createLevelTask] Error:', error.message);
+      throw new Error(error.message);
+    }
+
+    return data;
+  } catch (err) {
+    console.error('[createLevelTask] Exception:', err.message);
+    throw err;
+  }
+}
 async function updateTaskPoints(taskId, newPoints) {
   const { error } = await supabase.from('levels').update({ points: newPoints }).eq('task_id', taskId);
   return !error;
