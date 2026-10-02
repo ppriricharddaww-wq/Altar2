@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// SUPABASE CLIENT — V3.0
+// SUPABASE CLIENT — V3.0 (FIXED: pending_reviews)
 // ═══════════════════════════════════════════════════════════════════════════════
 const { createClient } = require('@supabase/supabase-js');
 const config = require('./config');
@@ -39,10 +39,9 @@ async function updateUser(userId, updates) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TASKS (المهام المولّدة)
+// TASKS
 // ═══════════════════════════════════════════════════════════════════════════════
 async function getTasksForLevel(levelNum) {
-  // ✅ الجدول الصحيح هو 'tasks' وليس 'levels'
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -77,7 +76,6 @@ async function createLevelTask(taskData) {
 }
 
 async function updateTaskPoints(taskId, newPoints) {
-  // ✅ الجدول الصحيح هو 'tasks'
   const { error } = await supabase
     .from('tasks')
     .update({ points: newPoints })
@@ -86,7 +84,7 @@ async function updateTaskPoints(taskId, newPoints) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CUSTOM TASKS (المهام المخصصة)
+// CUSTOM TASKS
 // ═══════════════════════════════════════════════════════════════════════════════
 async function getCustomTasksForLevel(levelNum) {
   try {
@@ -110,12 +108,13 @@ async function getCustomTasksForLevel(levelNum) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// REVIEWS (المراجعات)
+// REVIEWS (✅ الجدول الصحيح: pending_reviews)
 // ═══════════════════════════════════════════════════════════════════════════════
-// ⚠️ تحقق من اسم الجدول: 'reviews' أم 'pending_reviews'؟
-// الكود يستخدم 'reviews' هنا، إن كان جدولك اسمه مختلفاً غيّره
 async function createReview(review) {
   const { data, error } = await supabase.from('pending_reviews').insert([review]).select().single();
+  if (error) {
+    console.error('[createReview] Error:', error.message);
+  }
   return error ? null : data;
 }
 
@@ -125,6 +124,9 @@ async function findReviewById(reviewId) {
     .select('*')
     .eq('review_id', reviewId)
     .single();
+  if (error) {
+    console.error('[findReviewById] Error:', error.message);
+  }
   return error ? null : data;
 }
 
@@ -135,6 +137,9 @@ async function updateReview(reviewId, updates) {
     .eq('review_id', reviewId)
     .select()
     .single();
+  if (error) {
+    console.error('[updateReview] Error:', error.message);
+  }
   return error ? null : data;
 }
 
@@ -144,10 +149,12 @@ async function getPendingReviews() {
     .select('*')
     .eq('status', 'pending')
     .order('timestamp', { ascending: false });
+  if (error) {
+    console.error('[getPendingReviews] Error:', error.message);
+  }
   return error ? [] : data;
 }
 
-// ✅ جديد: جلب المراجعات المعلقة لمستخدم معين (لحل المشكلة الثالثة)
 async function getPendingReviewsByUser(userId) {
   try {
     const { data, error } = await supabase
@@ -228,27 +235,9 @@ async function getLeaderboard(limit = 20) {
     .limit(limit);
   return error ? [] : data;
 }
-async function getPendingReviewsByUser(userId) {
-  try {
-    const { data, error } = await supabase
-      .from('s')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'pending');
 
-    if (error) {
-      console.error('[getPendingReviewsByUser] Error:', error.message);
-      return [];
-    }
-
-    return data || [];
-  } catch (err) {
-    console.error('[getPendingReviewsByUser] Exception:', err.message);
-    return [];
-  }
-}
 // ═══════════════════════════════════════════════════════════════════════════════
-// EXPORTS (⚠️ مرة واحدة فقط، في نهاية الملف)
+// EXPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
 module.exports = {
   supabase,
@@ -276,7 +265,6 @@ module.exports = {
   findActiveTokenByChatId,
   // Logs
   logErrorDB,
-  getPendingReviewsByUser,
   // Leaderboard
   getLeaderboard
 };
