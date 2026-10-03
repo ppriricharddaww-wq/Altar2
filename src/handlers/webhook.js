@@ -280,30 +280,41 @@ async function handleCallbackQuery(callbackQuery) {
   const fromId = callbackQuery.from.id;
   const queryId = callbackQuery.id;
 
+  // ✅ Security check
+  if (String(fromId) !== String(config.MISTRESS_CHAT_ID)) {
+    try {
+      await tg.answerCallbackQuery(queryId, '⛔ Unauthorized.', true);
+    } catch (e) { console.log('[answer] failed:', e.message); }
+    return;
+  }
+
+  const parts = data.split(':');
+  if (parts.length < 2) {
+    try {
+      await tg.answerCallbackQuery(queryId, '⚠️ Invalid action', true);
+    } catch (e) { console.log('[answer] failed:', e.message); }
+    return;
+  }
+
+  const action = parts[0] === 'A' ? 'accept' : 'reject';
+  const reviewId = parts[1];
+
+  // ✅ Answer callback FIRST (before any heavy work)
+  // هذا يُغلق نافذة "loading" في تلغرام فوراً
+  let answerText = action === 'accept' ? '✅ Processing...' : '❌ Processing...';
   try {
-    // Security: only Mistress
-    if (String(fromId) !== String(config.MISTRESS_CHAT_ID)) {
-      return tg.answerCallbackQuery(queryId, '⛔ Unauthorized. Only Mistress can review.', true);
-    }
+    await tg.answerCallbackQuery(queryId, answerText);
+  } catch (e) {
+    console.log('[answerCallbackQuery early] failed:', e.message);
+  }
 
-    const parts = data.split(':');
-    if (parts.length < 2) {
-      return tg.answerCallbackQuery(queryId, '⚠️ Invalid action', true);
-    }
-
-    const action = parts[0] === 'A' ? 'accept' : 'reject';
-    const reviewId = parts[1];
-
+  // ✅ Process review (after answering)
+  try {
     const result = await reviews.processReview(reviewId, action, 'Mistress');
-
-    const answerText = result.success
-      ? (action === 'accept' ? '✅ Approved & points added' : '❌ Rejected & penalty applied')
-      : '⚠️ ' + (result.message || 'Unknown error');
-
-    return tg.answerCallbackQuery(queryId, answerText);
+    console.log('[processReview]', JSON.stringify(result));
   } catch (error) {
-    console.log('[callback FATAL]', error.message);
-    return tg.answerCallbackQuery(queryId, '⚠️ Server error', true);
+    console.log('[processReview FATAL]', error.message);
+    console.log(error.stack);
   }
 }
 
