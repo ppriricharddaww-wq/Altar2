@@ -148,6 +148,9 @@ async function handleMediaUpload(message) {
    // Build minimal caption: only description + punishment + slave note
 let caption = '';
 caption += '📝 ' + taskDescAr + '\n';
+if (taskDescEn && taskDescEn !== 'N/A') {
+  caption += '📝 ' + taskDescEn + '\n';
+}
 caption += '━━━━━━━━━━━━━━━━━━━━\n';
 caption += '⚠️ العقوبة: ' + taskPunishment + '\n';
 
