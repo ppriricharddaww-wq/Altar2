@@ -59,33 +59,34 @@ async function getLevel(params) {
         .map(r => r.task_id);
     }
 
-    // ✅ جديد: المهام المرفوضة
-    const rejected = await db.getRejectedReviewsByUser(userId);
-    if (rejected) {
-      // نأخذ آخر مراجعة مرفوضة لكل مهمة
-      const latestRejections = {};
-      rejected.forEach(r => {
-        if (r.task_id && r.task_id.startsWith('lv' + levelNum + '_')) {
-          if (!latestRejections[r.task_id]) {
-            latestRejections[r.task_id] = r;
-          }
-        }
-      });
-      rejectedTasks = Object.keys(latestRejections);
+    // ✅ المهام المرفوضة (استبعاد تلك التي لديها pending أحدث)
+const rejected = await db.getRejectedReviewsByUser(userId);
+if (rejected) {
+  const latestRejections = {};
+  const latestPending = {};
+  
+  // أحدث pending لكل مهمة
+  pending.forEach(r => {
+    if (r.task_id && !latestPending[r.task_id]) {
+      latestPending[r.task_id] = r.reviewed_at || r.timestamp;
     }
-  }
-
-  return {
-    success: true,
-    level: levelNum,
-    tasks,
-    pointsRequired,
-    completedTasks,
-    pendingTasks,
-    rejectedTasks,  // ✅ جديد
-    stage: Math.ceil(levelNum / 10),
-    stageName: getStageName(Math.ceil(levelNum / 10))
-  };
+  });
+  
+  // أحدث rejected لكل مهمة
+  rejected.forEach(r => {
+    if (r.task_id && r.task_id.startsWith('lv' + levelNum + '_')) {
+      if (!latestRejections[r.task_id]) {
+        latestRejections[r.task_id] = r;
+      }
+    }
+  });
+  
+  // فقط المهام المرفوضة التي ليس لها pending أحدث
+  rejectedTasks = Object.keys(latestRejections).filter(taskId => {
+    const rejectTime = new Date(latestRejections[taskId].reviewed_at || latestRejections[taskId].timestamp).getTime();
+    const pendingTime = latestPending[taskId] ? new Date(latestPending[taskId]).getTime() : 0;
+    return rejectTime > pendingTime;
+  });
 }
 // ═══════════════════════════════════════════════════════════════════════════════
 // SUBMIT TASK
