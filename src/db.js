@@ -286,6 +286,7 @@ module.exports = {
   findToken,
   updateToken,
   findActiveTokenByChatId,
+  getRejectedReviewsByUser,
   // Logs
   logErrorDB,
   // Leaderboard
