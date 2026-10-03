@@ -145,28 +145,21 @@ async function handleMediaUpload(message) {
     const now = new Date().toISOString();
 
     // Build rich caption (with length limit)
-    let caption = '🔍 <b>NEW PROOF SUBMISSION</b>\n';
-    caption += '━━━━━━━━━━━━━━━━━━━━\n';
-    caption += '👤 <b>Slave:</b> <code>' + token.user_id + '</code>\n';
-    caption += '📋 <b>Task:</b> <code>' + token.task_id + '</code>\n';
-    caption += '💰 <b>Points:</b> ' + taskPoints + '\n';
-    caption += '━━━━━━━━━━━━━━━━━━━━\n';
-    caption += '📝 <b>Task (AR):</b>\n' + taskDescAr.substring(0, 300) + '\n\n';
-    caption += '📝 <b>Task (EN):</b>\n' + taskDescEn.substring(0, 300) + '\n';
-    caption += '━━━━━━━━━━━━━━━━━━━━\n';
-    caption += '⚠️ <b>Punishment:</b>\n' + taskPunishment.substring(0, 150) + '\n\n';
-    caption += '🏆 <b>Reward:</b>\n' + taskReward.substring(0, 150) + '\n';
-    caption += '━━━━━━━━━━━━━━━━━━━━\n';
-    if (slaveCaption) {
-      caption += '💬 <b>Slave Note:</b>\n' + slaveCaption.substring(0, 300) + '\n';
-      caption += '━━━━━━━━━━━━━━━━━━━━\n';
-    }
-    caption += '🆔 <b>Review ID:</b> <code>' + reviewId + '</code>';
+   // Build minimal caption: only description + punishment + slave note
+let caption = '';
+caption += '📝 ' + taskDescAr + '\n';
+caption += '━━━━━━━━━━━━━━━━━━━━\n';
+caption += '⚠️ العقوبة: ' + taskPunishment + '\n';
 
-    // Ensure caption doesn't exceed Telegram limit (1024)
-    if (caption.length > 1024) {
-      caption = caption.substring(0, 1020) + '...';
-    }
+if (slaveCaption) {
+  caption += '━━━━━━━━━━━━━━━━━━━━\n';
+  caption += '💬 ملاحظة الخاضع: ' + slaveCaption;
+}
+
+// Ensure caption doesn't exceed Telegram limit (1024)
+if (caption.length > 1024) {
+  caption = caption.substring(0, 1020) + '...';
+}
 
     const inlineKeyboard = {
       inline_keyboard: [[
