@@ -40,7 +40,9 @@ async function getLevel(params) {
   const pointsRequired = calculatePointsRequired(levelNum);
 
   let completedTasks = [];
-  let pendingTasks = [];  // ✅ جديد: المهام قيد المراجعة
+  let pendingTasks = [];
+  let rejectedTasks = [];  // ✅ جديد
+
   if (userId) {
     const user = await db.findUserById(userId);
     if (user && user.completed_tasks) {
@@ -48,12 +50,28 @@ async function getLevel(params) {
         .split(',')
         .filter(t => t.startsWith('lv' + levelNum + '_'));
     }
-    // ✅ جلب المهام قيد المراجعة من جدول reviews
+
+    // المهام قيد المراجعة
     const pending = await db.getPendingReviewsByUser(userId);
     if (pending) {
       pendingTasks = pending
         .filter(r => r.task_id && r.task_id.startsWith('lv' + levelNum + '_'))
         .map(r => r.task_id);
+    }
+
+    // ✅ جديد: المهام المرفوضة
+    const rejected = await db.getRejectedReviewsByUser(userId);
+    if (rejected) {
+      // نأخذ آخر مراجعة مرفوضة لكل مهمة
+      const latestRejections = {};
+      rejected.forEach(r => {
+        if (r.task_id && r.task_id.startsWith('lv' + levelNum + '_')) {
+          if (!latestRejections[r.task_id]) {
+            latestRejections[r.task_id] = r;
+          }
+        }
+      });
+      rejectedTasks = Object.keys(latestRejections);
     }
   }
 
@@ -63,12 +81,12 @@ async function getLevel(params) {
     tasks,
     pointsRequired,
     completedTasks,
-    pendingTasks,  // ✅ جديد
+    pendingTasks,
+    rejectedTasks,  // ✅ جديد
     stage: Math.ceil(levelNum / 10),
     stageName: getStageName(Math.ceil(levelNum / 10))
   };
 }
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // SUBMIT TASK
 // ═══════════════════════════════════════════════════════════════════════════════
