@@ -235,7 +235,30 @@ async function getLeaderboard(limit = 20) {
     .limit(limit);
   return error ? [] : data;
 }
+// ═══════════════════════════════════════════════════════════════════════════════
+// جلب المراجعات المرفوضة لمستخدم معين (لإظهار رسالة الرفض)
+// ═══════════════════════════════════════════════════════════════════════════════
+async function getRejectedReviewsByUser(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('pending_reviews')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'rejected')
+      .order('reviewed_at', { ascending: false })
+      .limit(5);
 
+    if (error) {
+      console.error('[getRejectedReviewsByUser] Error:', error.message);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('[getRejectedReviewsByUser] Exception:', err.message);
+    return [];
+  }
+}
 // ═══════════════════════════════════════════════════════════════════════════════
 // EXPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
