@@ -45,37 +45,61 @@ async function handleWebhook(update) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // /start COMMAND
 // ═══════════════════════════════════════════════════════════════════════════════
+const { t_bot } = require('./bot_i18n');
+
 async function handleStartCommand(message) {
   const parts = message.text.split(' ');
   const payload = parts[1] || '';
   const chatId = message.chat.id;
-
+  
+  // ✅ إذا لم يكن هناك payload، اعرض اختيار اللغة
+  if (!payload) {
+    const botUser = await db.getBotUser(chatId);
+    const lang = botUser?.language || 'ar';
+    const t = (k) => t_bot(lang, k);
+    
+    // إذا كانت المسيطرة
+    if (String(chatId) === String(config.MISTRESS_CHAT_ID)) {
+      return tg.sendTelegramMessage(chatId, t('welcome_mistress'));
+    }
+    
+    // عرض اختيار اللغة مع أزرار
+    const keyboard = {
+      inline_keyboard: [[
+        { text: '🇸🇦 العربية', callback_data: 'lang:ar' },
+        { text: '🇬🇧 English', callback_data: 'lang:en' }
+      ]]
+    };
+    
+    return tg.sendTelegramMessageWithKeyboard(chatId, t('welcome') + '\n\n' + t('choose_language'), keyboard);
+  }
+  
+  // معالجة UPLOAD_ token
   if (payload.startsWith('UPLOAD_')) {
     const tokenStr = payload.replace('UPLOAD_', '');
     const token = await db.findToken(tokenStr);
+    const botUser = await db.getBotUser(chatId);
+    const lang = botUser?.language || 'ar';
+    const t = (k) => t_bot(lang, k);
 
     if (!token) {
-      return tg.sendTelegramMessage(chatId, '❌ رمز غير صالح. ابدأ من الموقع.');
+      return tg.sendTelegramMessage(chatId, t('invalid_token'));
     }
 
     if (token.used) {
-      return tg.sendTelegramMessage(chatId, '❌ هذه الجلسة منتهية.');
+      return tg.sendTelegramMessage(chatId, t('token_used'));
     }
 
     if (!token.chat_id) {
       await db.updateToken(tokenStr, { chat_id: String(chatId) });
-      return tg.sendTelegramMessage(chatId, '✅ تم ربط الجلسة. أرسل الإثبات الآن.');
+      return tg.sendTelegramMessage(chatId, t('session_linked'));
     }
 
     if (String(token.chat_id) === String(chatId)) {
-      return tg.sendTelegramMessage(chatId, '⏳ الجلسة مربوطة. أرسل الإثبات.');
+      return tg.sendTelegramMessage(chatId, t('session_already_linked'));
     }
 
-    return tg.sendTelegramMessage(chatId, '❌ هذا الرمز مستخدم من جهاز آخر.');
-  }
-
-  if (String(chatId) !== String(config.MISTRESS_CHAT_ID)) {
-    return tg.sendTelegramMessage(chatId, '👋 مرحباً بك في مذبح الأرواح.\nابدأ من الموقع.');
+    return tg.sendTelegramMessage(chatId, t('token_in_use'));
   }
 }
 
