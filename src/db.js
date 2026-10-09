@@ -316,6 +316,8 @@ module.exports = {
   getRejectedReviewsByUser,
   // Logs
   logErrorDB,
+  getBotUser,
+  upsertBotUser,
   // Leaderboard
   getLeaderboard
 };
