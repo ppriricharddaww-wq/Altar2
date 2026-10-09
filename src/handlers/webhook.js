@@ -88,9 +88,7 @@ async function handleStartCommand(message) {
     const t = (k) => t_bot(lang, k);
     const welcomeMessage = 
       '🔥\n' +
-      '━━━━━━━━━━━━━━━━━━━━\n' +
-     
-      ';
+      '━━━━━━━━━━━━━━━━━━━━\n';
 
     try {
       return await tg.sendTelegramMessageWithKeyboard(chatId, welcomeMessage, keyboard);
