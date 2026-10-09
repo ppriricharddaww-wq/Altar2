@@ -19,8 +19,17 @@ function generateUploadToken() {
   return token;
 }
 
-function calculatePointsRequired(level) {
-  return Math.floor(10 + (level * 1.5));
+async function calculatePointsRequiredFromDB(levelNum) {
+  try {
+    const { data, error } = await db.supabase
+      .from('level_config')
+      .select('points_required')
+      .eq('level_number', levelNum)
+      .single();
+    if (!error && data) return data.points_required;
+  } catch (e) {}
+  // fallback
+  return Math.floor(10 + (levelNum * 1.5));
 }
 
 function getStageName(stage) {
