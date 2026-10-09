@@ -87,10 +87,7 @@ async function handleStartCommand(message) {
     // ✅ مستخدم جديد → عرض الأزرار
     const t = (k) => t_bot(lang, k);
     const welcomeMessage = 
-      '🔥\n' +
-      '━━━━━━━━━━━━━━━━━━━━\n'
-
-    try {
+        try {
       return await tg.sendTelegramMessageWithKeyboard(chatId, welcomeMessage, keyboard);
     } catch (e) {
       console.log('[handleStartCommand] sendWithKeyboard failed:', e.message);
