@@ -45,41 +45,82 @@ async function handleWebhook(update) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // /start COMMAND
 // ═══════════════════════════════════════════════════════════════════════════════
-const { t_bot } = require('./bot_i18n');
-
 async function handleStartCommand(message) {
   const parts = message.text.split(' ');
   const payload = parts[1] || '';
   const chatId = message.chat.id;
-  
+
+  console.log('[handleStartCommand] chatId:', chatId, '| payload:', payload);
+
   // ✅ إذا لم يكن هناك payload، اعرض اختيار اللغة
   if (!payload) {
-    const botUser = await db.getBotUser(chatId);
-    const lang = botUser?.language || 'ar';
-    const t = (k) => t_bot(lang, k);
-    
-    // إذا كانت المسيطرة
-    if (String(chatId) === String(config.MISTRESS_CHAT_ID)) {
-      return tg.sendTelegramMessage(chatId, t('welcome_mistress'));
-    }
-    
-    // عرض اختيار اللغة مع أزرار
+    // ✅ الافتراضي: عرض الأزرار مباشرة، حتى لو فشل db
     const keyboard = {
       inline_keyboard: [[
         { text: '🇸🇦 العربية', callback_data: 'lang:ar' },
         { text: '🇬🇧 English', callback_data: 'lang:en' }
       ]]
     };
-    
-    return tg.sendTelegramMessageWithKeyboard(chatId, t('welcome') + '\n\n' + t('choose_language'), keyboard);
+
+    // محاولة قراءة اللغة من DB (اختياري)
+    let lang = 'ar';
+    try {
+      const botUser = await db.getBotUser(chatId);
+      if (botUser && botUser.language) {
+        lang = botUser.language;
+        
+        // إذا كانت المسيطرة ولديها لغة، عرض رسالتها
+        if (String(chatId) === String(config.MISTRESS_CHAT_ID)) {
+          const t = (k) => t_bot(lang, k);
+          return tg.sendTelegramMessage(chatId, t('welcome_mistress'));
+        }
+        
+        // مستخدم لديه لغة سابقة → عرض رسالة الترحيب فقط
+        const t = (k) => t_bot(lang, k);
+        return tg.sendTelegramMessage(chatId, t('welcome_returning'));
+      }
+    } catch (e) {
+      console.log('[handleStartCommand] db.getBotUser failed:', e.message);
+      // نستمر بعرض الأزرار
+    }
+
+    // ✅ مستخدم جديد → عرض الأزرار
+    const t = (k) => t_bot(lang, k);
+    const welcomeMessage = 
+      '🔥 <b>مرحباً بك في مذبح الأرواح</b>\n' +
+      '━━━━━━━━━━━━━━━━━━━━\n' +
+      'هذا البوت مخصص لاستقبال إثباتات تنفيذ المهام.\n' +
+      'لإرسال إثبات، ابدأ من الموقع ثم عد إلى هنا.\n\n' +
+      '🔥 <b>Welcome to The Altar of Souls</b>\n' +
+      '━━━━━━━━━━━━━━━━━━━━\n' +
+      'This bot is for submitting task proofs.\n' +
+      'To submit proof, start from the website then return here.\n\n' +
+      '🌐 <b>اختر اللغة / Choose your language:</b>';
+
+    try {
+      return await tg.sendTelegramMessageWithKeyboard(chatId, welcomeMessage, keyboard);
+    } catch (e) {
+      console.log('[handleStartCommand] sendWithKeyboard failed:', e.message);
+      // fallback: أرسل النص بدون أزرار
+      return tg.sendTelegramMessage(chatId, welcomeMessage);
+    }
   }
-  
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // معالجة UPLOAD_ token
+  // ═══════════════════════════════════════════════════════════════════════════
   if (payload.startsWith('UPLOAD_')) {
     const tokenStr = payload.replace('UPLOAD_', '');
     const token = await db.findToken(tokenStr);
-    const botUser = await db.getBotUser(chatId);
-    const lang = botUser?.language || 'ar';
+    
+    let lang = 'ar';
+    try {
+      const botUser = await db.getBotUser(chatId);
+      if (botUser && botUser.language) lang = botUser.language;
+    } catch (e) {
+      console.log('[handleStartCommand] token db error:', e.message);
+    }
+    
     const t = (k) => t_bot(lang, k);
 
     if (!token) {
