@@ -49,7 +49,25 @@ async function getBotInfo() {
   const res = await fetch(config.TG_API + '/getMe');
   return res.json();
 }
-
+async function sendTelegramMessageWithKeyboard(chatId, text, keyboard) {
+  try {
+    const url = config.TG_API + '/sendMessage';
+    const payload = {
+      chat_id: chatId,
+      text: text,
+      reply_markup: JSON.stringify(keyboard)
+    };
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (e) {
+    console.log('[sendWithKeyboard] error:', e.message);
+    return { ok: false };
+  }
+}
 module.exports = {
   tgRequest,
   sendTelegramMessage,
@@ -57,5 +75,6 @@ module.exports = {
   answerCallbackQuery,
   editMessageCaption,
   getFile,
+  sendTelegramMessageWithKeyboard,
   getBotInfo
 };
