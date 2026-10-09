@@ -87,15 +87,10 @@ async function handleStartCommand(message) {
     // ✅ مستخدم جديد → عرض الأزرار
     const t = (k) => t_bot(lang, k);
     const welcomeMessage = 
-      '🔥 <b>مرحباً بك في مذبح الأرواح</b>\n' +
+      '🔥\n' +
       '━━━━━━━━━━━━━━━━━━━━\n' +
-      'هذا البوت مخصص لاستقبال إثباتات تنفيذ المهام.\n' +
-      'لإرسال إثبات، ابدأ من الموقع ثم عد إلى هنا.\n\n' +
-      '🔥 <b>Welcome to The Altar of Souls</b>\n' +
-      '━━━━━━━━━━━━━━━━━━━━\n' +
-      'This bot is for submitting task proofs.\n' +
-      'To submit proof, start from the website then return here.\n\n' +
-      '🌐 <b>اختر اللغة / Choose your language:</b>';
+     
+      ';
 
     try {
       return await tg.sendTelegramMessageWithKeyboard(chatId, welcomeMessage, keyboard);
