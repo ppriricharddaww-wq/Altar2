@@ -6,7 +6,7 @@ const db = require('../db');
 const tg = require('../telegram');
 const { generateUploadToken } = require('../utils');
 const reviews = require('./reviews');
-
+const { t_bot } = require('./bot_i18n');
 // Deduplication cache (in-memory, resets on deploy)
 const processedUpdates = new Set();
 
