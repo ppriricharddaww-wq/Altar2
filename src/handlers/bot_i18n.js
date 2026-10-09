@@ -80,5 +80,17 @@ const BOT_I18N = {
 function t_bot(lang, key) {
   return (BOT_I18N[lang] && BOT_I18N[lang][key]) || BOT_I18N['en'][key] || key;
 }
+// ✅ دالة استبدال المتغيرات في الرسائل
+function t_bot_replace(lang, key, replacements) {
+  let text = t_bot(lang, key);
+  if (replacements) {
+    for (const k in replacements) {
+      text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), replacements[k]);
+    }
+  }
+  return text;
+}
+
+module.exports = { t_bot, t_bot_replace, BOT_I18N };
 
 module.exports = { t_bot, BOT_I18N };
