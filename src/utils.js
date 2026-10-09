@@ -1,6 +1,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // UTILITIES
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// كلمة المرور
+// ═══════════════════════════════════════════════════════════════════════════════
 function generatePassword(length = 12) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
   let pass = '';
@@ -10,6 +14,9 @@ function generatePassword(length = 12) {
   return pass;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// رمز الرفع
+// ═══════════════════════════════════════════════════════════════════════════════
 function generateUploadToken() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let token = '';
@@ -19,8 +26,21 @@ function generateUploadToken() {
   return token;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// حساب النقاط المطلوبة (النسخة المتزامنة)
+// ═══════════════════════════════════════════════════════════════════════════════
+function calculatePointsRequired(level) {
+  // ✅ عدّل هذه المعادلة كما تريد
+  // مثلاً: 100 نقطة لكل مستوى
+  return Math.floor(10 + (level * 1.5));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// حساب النقاط المطلوبة من قاعدة البيانات (اختياري)
+// ═══════════════════════════════════════════════════════════════════════════════
 async function calculatePointsRequiredFromDB(levelNum) {
   try {
+    const db = require('./db');  // ✅ استيراد db عند الحاجة
     const { data, error } = await db.supabase
       .from('level_config')
       .select('points_required')
@@ -29,9 +49,12 @@ async function calculatePointsRequiredFromDB(levelNum) {
     if (!error && data) return data.points_required;
   } catch (e) {}
   // fallback
-  return Math.floor(10 + (levelNum * 1.5));
+  return calculatePointsRequired(levelNum);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// اسم المرحلة
+// ═══════════════════════════════════════════════════════════════════════════════
 function getStageName(stage) {
   const names = [
     'The Awakening', 'The First Obeisance', 'The Trial of Flesh', 'The Mind Cage',
@@ -41,6 +64,9 @@ function getStageName(stage) {
   return names[Math.min(stage - 1, names.length - 1)] || 'The Unknown Realm';
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Seeded Random
+// ═══════════════════════════════════════════════════════════════════════════════
 function SeededRandom(seed) {
   this.seed = seed % 2147483647;
   if (this.seed <= 0) this.seed += 2147483646;
@@ -55,10 +81,14 @@ SeededRandom.prototype.nextInt = function(min, max) {
   return Math.floor(this.next() * (max - min + 1)) + min;
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXPORTS
+// ═══════════════════════════════════════════════════════════════════════════════
 module.exports = {
   generatePassword,
   generateUploadToken,
   calculatePointsRequired,
+  calculatePointsRequiredFromDB,  // ✅ تصدير النسخة من DB أيضاً
   getStageName,
   SeededRandom
 };
