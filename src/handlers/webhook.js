@@ -108,16 +108,17 @@ async function handleStartCommand(message) {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleMediaUpload(message) {
   const chatId = message.chat.id;
-  console.log('[MEDIA] from:', chatId);
-
+  
   try {
-    // Find active token
     const token = await db.findActiveTokenByChatId(chatId);
+    const botUser = await db.getBotUser(chatId);
+    const lang = botUser?.language || 'ar';
+    const t = (k) => t_bot(lang, k);
+
     if (!token) {
-      return tg.sendTelegramMessage(chatId, '❌ لا توجد جلسة نشطة. ابدأ من الموقع.');
+      return tg.sendTelegramMessage(chatId, t('no_active_session'));
     }
 
-    // Extract file_id
     let fileId = '';
     let method = 'sendDocument';
 
@@ -130,34 +131,24 @@ async function handleMediaUpload(message) {
     } else if (message.document) {
       fileId = message.document.file_id;
     } else {
-      return tg.sendTelegramMessage(chatId, '❌ نوع الملف غير مدعوم.');
+      return tg.sendTelegramMessage(chatId, t('unsupported_file'));
     }
 
-    // Get slave's caption (if any)
     const slaveCaption = message.caption || '';
 
-    // Fetch task details safely (with fallback)
-    let taskDescAr = 'غير متوفر';
-    let taskDescEn = 'N/A';
-    let taskPunishment = 'غير متوفر';
-    let taskReward = 'غير متوفر';
+    // جلب نص المهمة باللغة المختارة
+    let taskDesc = 'N/A';
     let taskPoints = 0;
-
     try {
       if (token.task_id) {
         const taskMatch = token.task_id.match(/lv(\d+)_/);
         if (taskMatch) {
           const levelNum = parseInt(taskMatch[1]);
           const tasks = await db.getTasksForLevel(levelNum);
-          if (tasks && tasks.length > 0) {
-            const task = tasks.find(t => t.task_id === token.task_id);
-            if (task) {
-              taskDescAr = task.description_ar || 'غير متوفر';
-              taskDescEn = task.description_en || 'N/A';
-              taskPunishment = task.punishment || 'غير متوفر';
-              taskReward = task.reward || 'غير متوفر';
-              taskPoints = task.points || 0;
-            }
+          const task = tasks.find(x => x.task_id === token.task_id);
+          if (task) {
+            taskDesc = (lang === 'ar') ? task.description_ar : task.description_en;
+            taskPoints = task.points || 0;
           }
         }
       }
@@ -168,25 +159,18 @@ async function handleMediaUpload(message) {
     const reviewId = 'R' + Date.now();
     const now = new Date().toISOString();
 
-    // Build rich caption (with length limit)
-   // Build minimal caption: only description + punishment + slave note
-let caption = '';
-caption += '📝 ' + taskDescAr + '\n';
-if (taskDescEn && taskDescEn !== 'N/A') {
-  caption += '📝 ' + taskDescEn + '\n';
-}
-caption += '━━━━━━━━━━━━━━━━━━━━\n';
-caption += '⚠️ العقوبة: ' + taskPunishment + '\n';
-
-if (slaveCaption) {
-  caption += '━━━━━━━━━━━━━━━━━━━━\n';
-  caption += '💬 ملاحظة الخاضع: ' + slaveCaption;
-}
-
-// Ensure caption doesn't exceed Telegram limit (1024)
-if (caption.length > 1024) {
-  caption = caption.substring(0, 1020) + '...';
-}
+    // ✅ caption بلغة المستخدم فقط، بدون عقوبة
+    let caption = '';
+    caption += '📋 ' + t('caption_task') + ':\n' + taskDesc + '\n';
+    caption += '━━━━━━━━━━━━━━━━━━━━\n';
+    caption += '👤 ' + t('caption_slave') + ': <code>' + token.user_id + '</code>\n';
+    if (slaveCaption) {
+      caption += '━━━━━━━━━━━━━━━━━━━━\n';
+      caption += '💬 ' + t('caption_note') + ':\n' + slaveCaption;
+    }
+    if (caption.length > 1024) {
+      caption = caption.substring(0, 1020) + '...';
+    }
 
     const inlineKeyboard = {
       inline_keyboard: [[
@@ -195,7 +179,6 @@ if (caption.length > 1024) {
       ]]
     };
 
-    // Build payload
     const payload = {
       chat_id: config.CHANNEL_ID,
       caption,
@@ -204,7 +187,6 @@ if (caption.length > 1024) {
     };
     payload[method === 'sendPhoto' ? 'photo' : (method === 'sendVideo' ? 'video' : 'document')] = fileId;
 
-    // Forward to channel
     const fwdRes = await fetch(config.TG_API + '/' + method, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -214,27 +196,22 @@ if (caption.length > 1024) {
     console.log('[FORWARD]', fwdJson.ok ? 'SUCCESS' : fwdJson.description);
 
     if (!fwdJson.ok) {
-      console.log('[FORWARD ERROR]', JSON.stringify(fwdJson));
-      await tg.sendTelegramMessage(chatId, '❌ فشل الإرسال: ' + fwdJson.description);
+      await tg.sendTelegramMessage(chatId, t('upload_failed'));
       return;
     }
 
     const channelMsgId = fwdJson.result.message_id;
 
-    // Get file URL
     let directUrl = '';
     try {
       const fileJson = await tg.getFile(fileId);
       if (fileJson.ok) {
         directUrl = 'https://api.telegram.org/file/bot' + config.BOT_TOKEN + '/' + fileJson.result.file_path;
       }
-    } catch (e) {
-      console.log('[getFile] failed:', e.message);
-    }
+    } catch (e) { console.log('[getFile] failed:', e.message); }
 
-    // Save to Supabase (with safe try/catch)
     try {
-      const reviewData = {
+      await db.createReview({
         review_id: reviewId,
         user_id: token.user_id,
         task_id: token.task_id,
@@ -244,50 +221,16 @@ if (caption.length > 1024) {
         status: 'pending',
         timestamp: now,
         channel_message_id: String(channelMsgId)
-      };
-
-      // Only add slave_caption if the column exists
-      // (we'll test with a simple try first)
-      reviewData.slave_caption = slaveCaption;
-
-      await db.createReview(reviewData);
-      console.log('[createReview] SUCCESS');
-    } catch (e) {
-      console.log('[createReview] failed:', e.message);
-      // Retry without slave_caption
-      try {
-        await db.createReview({
-          review_id: reviewId,
-          user_id: token.user_id,
-          task_id: token.task_id,
-          file_id: fileId,
-          media_url: directUrl,
-          slave_chat_id: String(chatId),
-          status: 'pending',
-          timestamp: now,
-          channel_message_id: String(channelMsgId)
-        });
-        console.log('[createReview] SUCCESS (without slave_caption)');
-      } catch (e2) {
-        console.log('[createReview] FATAL:', e2.message);
-      }
-    }
+      });
+    } catch (e) { console.log('[createReview] failed:', e.message); }
 
     await db.updateToken(token.token, { used: true });
-
-    // Confirm to slave
-    await tg.sendTelegramMessage(chatId, '✅ <b>تم استلام الإثبات!</b>\nReview ID: ' + reviewId);
-
-    // Notify Mistress
-    if (String(chatId) !== String(config.MISTRESS_CHAT_ID)) {
-      await tg.notifyMistress('📎 New Proof\nReview: ' + reviewId + '\nSlave: ' + token.user_id);
-    }
+    await tg.sendTelegramMessage(chatId, t('upload_success'));
 
   } catch (error) {
-    console.log('[MEDIA FATAL ERROR]', error.message);
-    console.log(error.stack);
+    console.log('[MEDIA FATAL]', error.message);
     try {
-      await tg.sendTelegramMessage(chatId, '⚠️ حدث خطأ في المعالجة. حاول مرة أخرى.');
+      await tg.sendTelegramMessage(chatId, '⚠️ Error');
     } catch (e) {}
   }
 }
@@ -299,45 +242,46 @@ async function handleCallbackQuery(callbackQuery) {
   const data = callbackQuery.data || '';
   const fromId = callbackQuery.from.id;
   const queryId = callbackQuery.id;
+  const chatId = callbackQuery.message.chat.id;
 
-  // ✅ Security check
-  if (String(fromId) !== String(config.MISTRESS_CHAT_ID)) {
-    try {
-      await tg.answerCallbackQuery(queryId, '⛔ Unauthorized.', true);
-    } catch (e) { console.log('[answer] failed:', e.message); }
-    return;
-  }
-
-  const parts = data.split(':');
-  if (parts.length < 2) {
-    try {
-      await tg.answerCallbackQuery(queryId, '⚠️ Invalid action', true);
-    } catch (e) { console.log('[answer] failed:', e.message); }
-    return;
-  }
-
-  const action = parts[0] === 'A' ? 'accept' : 'reject';
-  const reviewId = parts[1];
-
-  // ✅ Answer callback FIRST (before any heavy work)
-  // هذا يُغلق نافذة "loading" في تلغرام فوراً
-  let answerText = action === 'accept' ? '✅ Processing...' : '❌ Processing...';
   try {
-    await tg.answerCallbackQuery(queryId, answerText);
-  } catch (e) {
-    console.log('[answerCallbackQuery early] failed:', e.message);
-  }
+    // ✅ معالجة اختيار اللغة
+    if (data.startsWith('lang:')) {
+      const lang = data.split(':')[1];
+      if (lang !== 'ar' && lang !== 'en') {
+        return tg.answerCallbackQuery(queryId, '❌ Invalid', true);
+      }
+      await db.upsertBotUser(chatId, { language: lang });
+      const t = (k) => t_bot(lang, k);
+      await tg.answerCallbackQuery(queryId, t('language_set'), false);
+      await tg.sendTelegramMessage(chatId, t('language_set'));
+      return;
+    }
 
-  // ✅ Process review (after answering)
-  try {
+    // ✅ Security: only Mistress for accept/reject
+    if (String(fromId) !== String(config.MISTRESS_CHAT_ID)) {
+      return tg.answerCallbackQuery(queryId, '⛔ Unauthorized', true);
+    }
+
+    const parts = data.split(':');
+    if (parts.length < 2) {
+      return tg.answerCallbackQuery(queryId, '⚠️ Invalid', true);
+    }
+
+    const action = parts[0] === 'A' ? 'accept' : 'reject';
+    const reviewId = parts[1];
+
     const result = await reviews.processReview(reviewId, action, 'Mistress');
-    console.log('[processReview]', JSON.stringify(result));
+    const answerText = result.success
+      ? (action === 'accept' ? '✅ Approved' : '❌ Rejected')
+      : '⚠️ ' + (result.message || 'Error');
+
+    return tg.answerCallbackQuery(queryId, answerText);
   } catch (error) {
-    console.log('[processReview FATAL]', error.message);
-    console.log(error.stack);
+    console.log('[callback FATAL]', error.message);
+    return tg.answerCallbackQuery(queryId, '⚠️ Server error', true);
   }
 }
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // EXPORTS (⚠️ ضروري جداً)
 // ═══════════════════════════════════════════════════════════════════════════════
