@@ -258,8 +258,7 @@ async function levelUpUser(params) {
   }
 
   const newLevel = currentLevel + 1;
-  const newPoints = currentPoints - pointsRequired;  // ✅ خصم النقاط عند الترقية
-
+  const newPoints = currentPoints;  
   await db.updateUser(userId, {
     level: newLevel,
     points: newPoints,
