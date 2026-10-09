@@ -86,7 +86,8 @@ async function handleStartCommand(message) {
 
     // ✅ مستخدم جديد → عرض الأزرار
     const t = (k) => t_bot(lang, k);
-    
+     const welcomeMessage = 
+      '🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥\n'
         try {
       return await tg.sendTelegramMessageWithKeyboard(chatId, welcomeMessage, keyboard);
     } catch (e) {
