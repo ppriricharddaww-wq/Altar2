@@ -260,6 +260,33 @@ async function getRejectedReviewsByUser(userId) {
   }
 }
 // ═══════════════════════════════════════════════════════════════════════════════
+// BOT USERS (لتخزين لغة كل مستخدم)
+// ═══════════════════════════════════════════════════════════════════════════════
+async function getBotUser(chatId) {
+  const { data, error } = await supabase
+    .from('bot_users')
+    .select('*')
+    .eq('chat_id', String(chatId))
+    .single();
+  return error ? null : data;
+}
+
+async function upsertBotUser(chatId, updates) {
+  const existing = await getBotUser(chatId);
+  if (existing) {
+    const { error } = await supabase
+      .from('bot_users')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('chat_id', String(chatId));
+    return !error;
+  } else {
+    const { error } = await supabase
+      .from('bot_users')
+      .insert([{ chat_id: String(chatId), ...updates }]);
+    return !error;
+  }
+}
+// ═══════════════════════════════════════════════════════════════════════════════
 // EXPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
 module.exports = {
