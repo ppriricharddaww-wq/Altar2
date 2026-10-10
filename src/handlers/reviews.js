@@ -114,8 +114,7 @@ async function processReview(reviewId, action, reviewerId) {
     return { success: true, message: 'Task approved', pointsEarned: taskPoints, totalPoints: newPoints, leveledUp, newLevel };
 
   } else {
-  } else {
-  // ═════════════════════════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════════════════════
   // REJECT — تطبيق العقوبة المخصصة
   // ═════════════════════════════════════════════════════════════════════════════
   const currentPoints = user.points || 0;
