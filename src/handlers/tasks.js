@@ -182,7 +182,7 @@ async function ensureLevelTasks(levelNum) {
         description_en: ct.description_en,
         verification_type: ct.verification_type,
         verification_answer: ct.verification_answer || '',
-        punishment: ct.punishment || '',
+        punishment: ct.punishment || 'خصم ضعف النقاط',
         reward: ct.reward || '',
         media_required: ct.media_required || false
       });
