@@ -210,7 +210,7 @@ async function updatePoints(params) {
     return { success: false, message: 'Invalid parameters' };
   }
 
-  await db.updateUser(userId, { points: Math.max(0, parseInt(points)) });
+  await db.updateUser(userId, { points: parseInt(points) });
   return { success: true, message: 'Points updated to ' + points };
 }
 
