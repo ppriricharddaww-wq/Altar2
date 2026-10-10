@@ -17,6 +17,8 @@ function mapTaskForFrontend(t) {
     verificationType: t.verification_type,
     verificationAnswer: t.verification_answer,
     punishment: t.punishment,
+    punishmentType: t.punishment_type,   // ✅ جديد
+    punishmentValue: t.punishment_value,  // ✅ جديد
     reward: t.reward,
     mediaRequired: t.media_required
   };
@@ -182,15 +184,18 @@ async function ensureLevelTasks(levelNum) {
         description_en: ct.description_en,
         verification_type: ct.verification_type,
         verification_answer: ct.verification_answer || '',
-        punishment: ct.punishment || 'خصم ضعف النقاط',
-        reward: ct.reward || '',
+        // ✅ العقوبة المخصصة
+        punishment: ct.punishment_text || 'خصم ضعف النقاط',
+        punishment_type: ct.punishment_type || 'points',
+        punishment_value: ct.punishment_value || 0,
+        // ✅ المكافأة المخصصة (اختياري)
+        reward: ct.reward_text || '',
         media_required: ct.media_required || false
       });
     }
     return;
   }
 
-  // 3. لا توجد مهام مخصصة → لا تُولّد مهام تلقائية
   console.log('[ensureLevelTasks] No custom tasks for level ' + levelNum + ' — level is empty');
   return;
 }
