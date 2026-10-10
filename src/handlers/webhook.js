@@ -45,9 +45,6 @@ async function handleWebhook(update) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // /start COMMAND
 // ═══════════════════════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════════
-// /start COMMAND
-// ═══════════════════════════════════════════════════════════════════════════════
 async function handleStartCommand(message) {
   const parts = message.text.split(' ');
   const payload = parts[1] || '';
@@ -59,41 +56,27 @@ async function handleStartCommand(message) {
   // 1. إذا لم يكن هناك payload → اختيار اللغة أو ترحيب
   // ═══════════════════════════════════════════════════════════════════════════
   if (!payload) {
-    let lang = 'ar';
-
-    // محاولة قراءة اللغة من DB
+    let botUser = null;
     try {
-      const botUser = await db.getBotUser(chatId);
-      if (botUser && botUser.language) {
-        lang = botUser.language;
-      }
+      botUser = await db.getBotUser(chatId);
     } catch (e) {
       console.log('[handleStartCommand] db.getBotUser failed:', e.message);
-      // نستمر بالافتراضي
     }
 
-    const t = (k) => t_bot(lang, k);
-
-    // إذا كان المستخدم لديه لغة سابقة → رسالة ترحيب فقط
-    if (lang === 'ar' || lang === 'en') {
-      // تحقق: هل لديه لغة محفوظة فعلاً؟
-      try {
-        const botUser = await db.getBotUser(chatId);
-        if (botUser && botUser.language) {
-          // ✅ مستخدم لديه لغة سابقة
-          if (String(chatId) === String(config.MISTRESS_CHAT_ID)) {
-            return tg.sendTelegramMessage(chatId, t('welcome_mistress'));
-          }
-          return tg.sendTelegramMessage(chatId, t('welcome_returning'));
-        }
-      } catch (e) {
-        // تجاهل
+    // ✅ مستخدم لديه لغة محفوظة
+    if (botUser && botUser.language) {
+      const lang = botUser.language;
+      const t = (k) => t_bot(lang, k);
+      
+      if (String(chatId) === String(config.MISTRESS_CHAT_ID)) {
+        return tg.sendTelegramMessage(chatId, t('welcome_mistress'));
       }
+      return tg.sendTelegramMessage(chatId, t('welcome_returning'));
     }
 
     // ✅ مستخدم جديد → عرض أزرار اختيار اللغة
     const welcomeMessage = 
-      '🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥\n' +
+      '🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥\n' +
       '🌐 اختر اللغة / Choose your language';
 
     const keyboard = {
@@ -107,7 +90,6 @@ async function handleStartCommand(message) {
       return await tg.sendTelegramMessageWithKeyboard(chatId, welcomeMessage, keyboard);
     } catch (e) {
       console.log('[handleStartCommand] sendWithKeyboard failed:', e.message);
-      // fallback: أرسل النص بدون أزرار
       return tg.sendTelegramMessage(chatId, welcomeMessage);
     }
   }
@@ -149,7 +131,6 @@ async function handleStartCommand(message) {
     return tg.sendTelegramMessage(chatId, t('token_in_use'));
   }
 }
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // MEDIA UPLOAD HANDLER (with safe fallbacks)
 // ═══════════════════════════════════════════════════════════════════════════════
