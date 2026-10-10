@@ -119,8 +119,7 @@ async function processReview(reviewId, action, reviewerId) {
     // ═════════════════════════════════════════════════════════════════════════
     const currentPoints = user.points || 0;
     const penalty = taskPoints * 2;
-    const newPoints = Math.max(0, currentPoints - penalty);
-
+    const newPoints = currentPoints - penalty;
     await db.updateUser(userId, { points: newPoints });
 
     if (task) {
