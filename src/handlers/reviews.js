@@ -35,8 +35,11 @@ async function processReview(reviewId, action, reviewerId) {
   const channelMsgId = review.channel_message_id;
   const now = new Date().toISOString();
 
-  // ✅ جلب لغة المستخدم من bot_users
-  let lang = 'ar';  // افتراضي
+  // ✅ التحقق من التطابق
+  const isSelfTest = String(slaveChatId) === String(config.MISTRESS_CHAT_ID);
+
+  // ✅ جلب لغة المستخدم
+  let lang = 'ar';
   if (slaveChatId) {
     try {
       const botUser = await db.getBotUser(slaveChatId);
@@ -48,7 +51,6 @@ async function processReview(reviewId, action, reviewerId) {
     }
   }
 
-  // تحديث حالة المراجعة
   await db.updateReview(reviewId, {
     status: action === 'accept' ? 'approved' : 'rejected',
     reviewed_at: now,
@@ -85,13 +87,13 @@ async function processReview(reviewId, action, reviewerId) {
       leveledUp = true;
     }
 
-    // ✅ تعديل رسالة القناة
+    // تعديل رسالة القناة
     if (channelMsgId) {
       await tg.editMessageCaption(config.CHANNEL_ID, parseInt(channelMsgId),
         '✅ <b>APPROVED</b>\n\nSlave: ' + userId + '\nTask: ' + taskId + '\nPoints: +' + taskPoints);
     }
 
-    // ✅ إشعار الخاضع بلغته فقط
+    // ✅ إشعار الخاضع (بلغة المستخدم)
     if (slaveChatId) {
       const msgKey = leveledUp ? 'proof_accepted_levelup' : 'proof_accepted';
       const replacements = {
@@ -104,7 +106,10 @@ async function processReview(reviewId, action, reviewerId) {
       await tg.sendTelegramMessage(slaveChatId, message);
     }
 
-    await tg.notifyMistress('✅ Proof Accepted\n\nSlave: ' + userId + '\nTask: ' + taskId + '\nPoints: +' + taskPoints);
+    // ✅ إشعار المسيطرة — فقط إذا كان الخاضع ليس المسيطرة
+    if (!isSelfTest) {
+      await tg.notifyMistress('✅ Proof Accepted\n\nSlave: ' + userId + '\nTask: ' + taskId + '\nPoints: +' + taskPoints);
+    }
 
     return { success: true, message: 'Task approved', pointsEarned: taskPoints, totalPoints: newPoints, leveledUp, newLevel };
 
@@ -118,7 +123,6 @@ async function processReview(reviewId, action, reviewerId) {
 
     await db.updateUser(userId, { points: newPoints });
 
-    // Halve task points
     if (task) {
       await db.updateTaskPoints(taskId, Math.max(1, Math.floor(taskPoints / 2)));
     }
@@ -132,13 +136,13 @@ async function processReview(reviewId, action, reviewerId) {
       banned = true;
     }
 
-    // ✅ تعديل رسالة القناة
+    // تعديل رسالة القناة
     if (channelMsgId) {
       await tg.editMessageCaption(config.CHANNEL_ID, parseInt(channelMsgId),
         '❌ <b>REJECTED</b>\n\nSlave: ' + userId + '\nTask: ' + taskId + '\nPenalty: -' + penalty + ' points');
     }
 
-    // ✅ إشعار الخاضع بلغته فقط
+    // ✅ إشعار الخاضع (بلغة المستخدم)
     if (slaveChatId) {
       let msgKey = 'proof_rejected';
       if (banned) msgKey = 'proof_rejected_banned';
@@ -153,7 +157,10 @@ async function processReview(reviewId, action, reviewerId) {
       await tg.sendTelegramMessage(slaveChatId, message);
     }
 
-    await tg.notifyMistress('❌ Proof Rejected\n\nSlave: ' + userId + '\nTask: ' + taskId + '\nPenalty: -' + penalty + (banned ? '\nBANNED 6 hours' : ''));
+    // ✅ إشعار المسيطرة — فقط إذا كان الخاضع ليس المسيطرة
+    if (!isSelfTest) {
+      await tg.notifyMistress('❌ Proof Rejected\n\nSlave: ' + userId + '\nTask: ' + taskId + '\nPenalty: -' + penalty + (banned ? '\nBANNED 6 hours' : ''));
+    }
 
     return { success: true, message: 'Task rejected. Penalty: -' + penalty, penalty, totalPoints: newPoints, banned, bannedUntil };
   }
