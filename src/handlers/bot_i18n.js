@@ -31,14 +31,12 @@ const BOT_I18N = {
     caption_slave: '👤 الخاضع',
     caption_note: '💬 ملاحظة الخاضع',
     
-  
-  // ✅ رسائل القبول والرفض (جديدة)
-  proof_accepted: '✅ <b>تم قبول إثباتك!</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➕ النقاط المكتسبة: +{points}',
-  proof_accepted_levelup: '✅ <b>تم قبول إثباتك!</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➕ النقاط المكتسبة: +{points}\n⬆️ ترقية! المستوى الجديد: {newLevel}',
-  proof_rejected: '❌ <b>تم رفض إثباتك</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➖ العقوبة: -{penalty} نقطة',
-  proof_rejected_banned: '❌ <b>تم رفض إثباتك</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➖ العقوبة: -{penalty} نقطة\n🚫 حظر حتى: {bannedUntil}',
-  proof_rejected_no_penalty: '❌ <b>تم رفض إثباتك</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n\nيمكنك إعادة المحاولة بإثبات جديد.',
-
+    // ✅ رسائل القبول والرفض
+    proof_accepted: '✅ <b>تم قبول إثباتك!</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➕ النقاط المكتسبة: +{points}',
+    proof_accepted_levelup: '✅ <b>تم قبول إثباتك!</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➕ النقاط المكتسبة: +{points}\n⬆️ ترقية! المستوى الجديد: {newLevel}',
+    proof_rejected: '❌ <b>تم رفض إثباتك</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➖ العقوبة: -{penalty} نقطة',
+    proof_rejected_banned: '❌ <b>تم رفض إثباتك</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➖ العقوبة: -{penalty} نقطة\n🚫 حظر حتى: {bannedUntil}',
+    proof_rejected_no_penalty: '❌ <b>تم رفض إثباتك</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n\nيمكنك إعادة المحاولة بإثبات جديد.',
   },
   en: {
     // Welcome messages
@@ -68,18 +66,23 @@ const BOT_I18N = {
     caption_task: '📝 Task',
     caption_slave: '👤 Slave',
     caption_note: '💬 Slave Note',
-    / ✅ رسائل القبول والرفض (جديدة)
-  proof_accepted: '✅ <b>Your proof has been accepted!</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➕ Points earned: +{points}',
-  proof_accepted_levelup: '✅ <b>Your proof has been accepted!</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➕ Points earned: +{points}\n⬆️ Level up! New level: {newLevel}',
-  proof_rejected: '❌ <b>Your proof has been rejected</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➖ Penalty: -{penalty} points',
-  proof_rejected_banned: '❌ <b>Your proof has been rejected</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➖ Penalty: -{penalty} points\n🚫 Banned until: {bannedUntil}',
-  proof_rejected_no_penalty: '❌ <b>Your proof has been rejected</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n\nYou can try again with a new proof.',
+    
+    // ✅ Acceptance/Rejection messages
+    proof_accepted: '✅ <b>Your proof has been accepted!</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➕ Points earned: +{points}',
+    proof_accepted_levelup: '✅ <b>Your proof has been accepted!</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➕ Points earned: +{points}\n⬆️ Level up! New level: {newLevel}',
+    proof_rejected: '❌ <b>Your proof has been rejected</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➖ Penalty: -{penalty} points',
+    proof_rejected_banned: '❌ <b>Your proof has been rejected</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n➖ Penalty: -{penalty} points\n🚫 Banned until: {bannedUntil}',
+    proof_rejected_no_penalty: '❌ <b>Your proof has been rejected</b>\n\n🆔 Review: {reviewId}\n📋 Task: {taskId}\n\nYou can try again with a new proof.',
   }
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// دوال الترجمة
+// ═══════════════════════════════════════════════════════════════════════════════
 function t_bot(lang, key) {
   return (BOT_I18N[lang] && BOT_I18N[lang][key]) || BOT_I18N['en'][key] || key;
 }
+
 // ✅ دالة استبدال المتغيرات في الرسائل
 function t_bot_replace(lang, key, replacements) {
   let text = t_bot(lang, key);
@@ -91,6 +94,7 @@ function t_bot_replace(lang, key, replacements) {
   return text;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXPORTS (⚠️ مرة واحدة فقط)
+// ═══════════════════════════════════════════════════════════════════════════════
 module.exports = { t_bot, t_bot_replace, BOT_I18N };
-
-module.exports = { t_bot, BOT_I18N };
