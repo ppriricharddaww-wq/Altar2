@@ -4,7 +4,7 @@
 const config = require('../config');
 const db = require('../db');
 const tg = require('../telegram');
-const { t_bot } = require('./bot_i18n');
+const { t_bot, t_bot_replace } = require('./bot_i18n');
 async function getPendingReviews(params) {
   const auth = require('./auth').requireMaster(params);
   if (!auth.authorized) return auth;
