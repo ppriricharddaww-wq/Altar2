@@ -94,7 +94,7 @@ async function handleStartCommand(message) {
     // ✅ مستخدم جديد → عرض أزرار اختيار اللغة
     const welcomeMessage = 
       '🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥\n' +
-      '🌐 اختر اللغة / Choose your language :';
+      '🌐 اختر اللغة / Choose your language';
 
     const keyboard = {
       inline_keyboard: [[
