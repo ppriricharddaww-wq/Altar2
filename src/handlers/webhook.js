@@ -45,6 +45,9 @@ async function handleWebhook(update) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // /start COMMAND
 // ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+// /start COMMAND
+// ═══════════════════════════════════════════════════════════════════════════════
 async function handleStartCommand(message) {
   const parts = message.text.split(' ');
   const payload = parts[1] || '';
@@ -52,9 +55,47 @@ async function handleStartCommand(message) {
 
   console.log('[handleStartCommand] chatId:', chatId, '| payload:', payload);
 
-  // ✅ إذا لم يكن هناك payload، اعرض اختيار اللغة
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 1. إذا لم يكن هناك payload → اختيار اللغة أو ترحيب
+  // ═══════════════════════════════════════════════════════════════════════════
   if (!payload) {
-    // ✅ الافتراضي: عرض الأزرار مباشرة، حتى لو فشل db
+    let lang = 'ar';
+
+    // محاولة قراءة اللغة من DB
+    try {
+      const botUser = await db.getBotUser(chatId);
+      if (botUser && botUser.language) {
+        lang = botUser.language;
+      }
+    } catch (e) {
+      console.log('[handleStartCommand] db.getBotUser failed:', e.message);
+      // نستمر بالافتراضي
+    }
+
+    const t = (k) => t_bot(lang, k);
+
+    // إذا كان المستخدم لديه لغة سابقة → رسالة ترحيب فقط
+    if (lang === 'ar' || lang === 'en') {
+      // تحقق: هل لديه لغة محفوظة فعلاً؟
+      try {
+        const botUser = await db.getBotUser(chatId);
+        if (botUser && botUser.language) {
+          // ✅ مستخدم لديه لغة سابقة
+          if (String(chatId) === String(config.MISTRESS_CHAT_ID)) {
+            return tg.sendTelegramMessage(chatId, t('welcome_mistress'));
+          }
+          return tg.sendTelegramMessage(chatId, t('welcome_returning'));
+        }
+      } catch (e) {
+        // تجاهل
+      }
+    }
+
+    // ✅ مستخدم جديد → عرض أزرار اختيار اللغة
+    const welcomeMessage = 
+      '🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥\n' +
+      '🌐 اختر اللغة / Choose your language:';
+
     const keyboard = {
       inline_keyboard: [[
         { text: '🇸🇦 العربية', callback_data: 'lang:ar' },
@@ -62,33 +103,7 @@ async function handleStartCommand(message) {
       ]]
     };
 
-    // محاولة قراءة اللغة من DB (اختياري)
-    let lang = 'ar';
     try {
-      const botUser = await db.getBotUser(chatId);
-      if (botUser && botUser.language) {
-        lang = botUser.language;
-        
-        // إذا كانت المسيطرة ولديها لغة، عرض رسالتها
-        if (String(chatId) === String(config.MISTRESS_CHAT_ID)) {
-          const t = (k) => t_bot(lang, k);
-          return tg.sendTelegramMessage(chatId, t('welcome_mistress'));
-        }
-        
-        // مستخدم لديه لغة سابقة → عرض رسالة الترحيب فقط
-        const t = (k) => t_bot(lang, k);
-        return tg.sendTelegramMessage(chatId, t('welcome_returning'));
-      }
-    } catch (e) {
-      console.log('[handleStartCommand] db.getBotUser failed:', e.message);
-      // نستمر بعرض الأزرار
-    }
-
-    // ✅ مستخدم جديد → عرض الأزرار
-    const t = (k) => t_bot(lang, k);
-     const welcomeMessage = 
-      '🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥'
-        try {
       return await tg.sendTelegramMessageWithKeyboard(chatId, welcomeMessage, keyboard);
     } catch (e) {
       console.log('[handleStartCommand] sendWithKeyboard failed:', e.message);
@@ -98,7 +113,7 @@ async function handleStartCommand(message) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // معالجة UPLOAD_ token
+  // 2. معالجة UPLOAD_ token
   // ═══════════════════════════════════════════════════════════════════════════
   if (payload.startsWith('UPLOAD_')) {
     const tokenStr = payload.replace('UPLOAD_', '');
