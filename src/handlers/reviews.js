@@ -155,7 +155,25 @@ async function processReview(reviewId, action, reviewerId) {
       }]);
       punishmentDescription = 'تسريب كلمة السر للعلن';
       break;
-
+case 'steal_points':
+      // ✅ نهب النقاط: خصم النقاط من الخاضع ونقلها إلى بركة النهب
+      const stealAmount = punishmentValue > 0 ? punishmentValue : (taskPoints * 2);
+      
+      // 1. خصم النقاط من الخاضع
+      const newPoints = currentPoints - stealAmount;
+      await db.updateUser(userId, { points: newPoints });
+      
+      // 2. إضافة النقاط إلى جدول steal_pool (ليتمكن الآخرون من نهبها)
+      await db.supabase.from('steal_pool').insert([{
+        victim_user_id: userId,
+        points_amount: stealAmount,
+        remaining_amount: stealAmount,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      }]);
+      
+      punishmentDescription = 'خصم ونهب ' + stealAmount + ' نقطة';
+      penalty = stealAmount;
+      break;
     case 'leak_video':
       // تسريب فيديو حقيقي
       const userReviews = await db.getApprovedReviewsByUser(userId);
