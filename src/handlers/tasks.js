@@ -35,6 +35,19 @@ async function getLevel(params) {
     return { success: false, message: 'Invalid level' };
   }
 
+  // ✅ جديد: التحقق من الحظر
+  if (userId) {
+    const user = await db.findUserById(userId);
+    if (user && user.banned_until && new Date(user.banned_until) > new Date()) {
+      return {
+        success: false,
+        message: 'Account banned until ' + user.banned_until,
+        banned: true,
+        bannedUntil: user.banned_until
+      };
+    }
+  }
+
   await ensureLevelTasks(levelNum);
 
   const rawTasks = await db.getTasksForLevel(levelNum);
