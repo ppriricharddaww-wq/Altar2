@@ -6,7 +6,7 @@ const tg = require('../telegram');
 const { generatePassword } = require('../utils');
 
 async function signup(params) {
-  const nickname = (params.nickname || '').trim();
+  const { nickname, gender, subType } = params;
   if (!nickname || nickname.length < 2 || nickname.length > 30) {
     return { success: false, message: 'Nickname must be 2-30 characters' };
   }
@@ -22,6 +22,8 @@ async function signup(params) {
     level: 1,
     completed_tasks: '',
     points: 0,
+     gender: gender || 'unspecified',
+    sub_type: subType || 'general',
     created_at: now
   });
 
