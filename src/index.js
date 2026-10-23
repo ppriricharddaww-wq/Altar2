@@ -76,6 +76,8 @@ app.get('/api', async (req, res) => {
 
   try {
     switch (action) {
+      case 'getStealPool': result = await getStealPool(); break;
+      case 'stealPoints': result = await stealPoints(req.query); break;
       case 'levelUp': result = await levelUpUser(req.query); break;
       case 'signup': result = await auth.signup(req.query); break;
       case 'login': result = await auth.login(req.query); break;
@@ -321,7 +323,18 @@ async function runSelfTest() {
     message: 'Railway + Supabase backend v3.0 active.'
   };
 }
+async function getStealPool() {
+  const pool = await db.getAvailableStealPool();
+  return { success: true, pool };
+}
 
+async function stealPoints(params) {
+  const { poolId, thiefId, amount } = params;
+  if (!poolId || !thiefId || !amount) return { success: false, message: 'Missing parameters' };
+
+  const result = await db.stealPointsFromPool(poolId, thiefId, parseInt(amount));
+  return result;
+}
 // ═══════════════════════════════════════════════════════════════════════════════
 // START SERVER
 // ═══════════════════════════════════════════════════════════════════════════════
