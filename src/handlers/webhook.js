@@ -136,7 +136,9 @@ async function handleStartCommand(message) {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleMediaUpload(message) {
   const chatId = message.chat.id;
-  
+  const user = await db.findUserById(token.user_id); 
+const userNickname = user ? user.nickname : token.user_id;
+const userLang = user ? user.language : 'ar'; 
   try {
     const token = await db.findActiveTokenByChatId(chatId);
     const botUser = await db.getBotUser(chatId);
@@ -191,7 +193,14 @@ async function handleMediaUpload(message) {
     let caption = '';
     caption += '📋 ' + t('caption_task') + ':\n' + taskDesc + '\n';
     caption += '━━━━━━━━━━━━━━━━━━━━\n';
-    caption += '👤 ' + t('caption_slave') + ': <code>' + token.user_id + '</code>\n';
+    caption += '👤 ' + t('caption_slave') + ': <b>' + userNickname + '</b>\n';
+    const taskPunishAr = task ? task.punishment_ar : 'خصم ضعف النقاط';
+    const taskPunishEn = task ? task.punishment_en : 'Double points deduction';
+    
+    caption += '⚠️ <b>العقوبة الأصلية / Original Punishment:</b>\n';
+    caption += 'AR: ' + taskPunishAr + '\n';
+    caption += 'EN: ' + taskPunishEn + '\n';
+    caption += '━━━━━━━━━━━━━━━━━━━━\n';
     if (slaveCaption) {
       caption += '━━━━━━━━━━━━━━━━━━━━\n';
       caption += '💬 ' + t('caption_note') + ':\n' + slaveCaption;
