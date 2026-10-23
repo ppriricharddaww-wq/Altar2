@@ -287,9 +287,74 @@ async function upsertBotUser(chatId, updates) {
   }
 }
 // ═══════════════════════════════════════════════════════════════════════════════
+// جلب النقاط المتاحة للنهب (للمستخدمين الآخرين)
+// ═══════════════════════════════════════════════════════════════════════════════
+async function getAvailableStealPool() {
+  try {
+    // حذف النقاط المنتهية أولاً
+    await supabase
+      .from('steal_pool')
+      .delete()
+      .lt('expires_at', new Date().toISOString());
+      
+    const { data, error } = await supabase
+      .from('steal_pool')
+      .select('*')
+      .gt('remaining_amount', 0)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[getAvailableStealPool] Error:', error.message);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    console.error('[getAvailableStealPool] Exception:', err.message);
+    return [];
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// نهب النقاط من البركة
+// ═══════════════════════════════════════════════════════════════════════════════
+async function stealPointsFromPool(poolId, thiefId, amountToSteal) {
+  try {
+    // 1. جلب الصف المطلوب
+    const { data: poolItem, error: fetchError } = await supabase
+      .from('steal_pool')
+      .select('*')
+      .eq('id', poolId)
+      .single();
+
+    if (fetchError || !poolItem) return { success: false, message: 'Pool item not found' };
+    if (poolItem.remaining_amount < amountToSteal) return { success: false, message: 'Not enough points' };
+
+    // 2. تحديث البركة (خصم المبلغ)
+    const newRemaining = poolItem.remaining_amount - amountToSteal;
+    await supabase
+      .from('steal_pool')
+      .update({ remaining_amount: newRemaining })
+      .eq('id', poolId);
+
+    // 3. إضافة النقاط للسارق
+    const thief = await findUserById(thiefId);
+    if (!thief) return { success: false, message: 'Thief not found' };
+    
+    const newThiefPoints = (thief.points || 0) + amountToSteal;
+    await updateUser(thiefId, { points: newThiefPoints });
+
+    return { success: true, newPoints: newThiefPoints, stolen: amountToSteal };
+  } catch (err) {
+    console.error('[stealPointsFromPool] Exception:', err.message);
+    return { success: false, message: err.message };
+  }
+}
+// ═══════════════════════════════════════════════════════════════════════════════
 // EXPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
 module.exports = {
+  getAvailableStealPool,
+  stealPointsFromPool,
   supabase,
   // Users
   findUserById,
