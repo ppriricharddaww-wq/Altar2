@@ -147,7 +147,38 @@ async function processReview(reviewId, action, reviewerId) {
         levelDrop = punishmentValue > 0 ? punishmentValue : 1;
         punishmentDescription = 'خفض ' + levelDrop + ' مستوى';
         break;
-        
+          case 'leak_creds':
+      // تسريب كلمة السر
+      await db.supabase.from('leaked_credentials').insert([{
+        user_id: user.id,
+        password: user.password
+      }]);
+      punishmentDescription = 'تسريب كلمة السر للعلن';
+      break;
+
+    case 'leak_video':
+      // تسريب فيديو حقيقي
+      const userReviews = await db.getApprovedReviewsByUser(userId);
+      if (userReviews && userReviews.length > 0) {
+        const randomVid = userReviews[Math.floor(Math.random() * userReviews.length)];
+        if (randomVid.media_url) {
+          await db.supabase.from('leaked_videos').insert([{
+            user_id: user.id,
+            video_url: randomVid.media_url
+          }]);
+        }
+      }
+      punishmentDescription = 'تسريب فيديو من إثباتاتك';
+      break;
+
+    case 'steal_points':
+      // نهب النقاط (تتم إتاحتها لباقي الخاضعين)
+      // في الخادم، نضع النقاط في حالة "نهب" لباقي الخاضعين لجمعها
+      const stolenAmount = punishmentValue > 0 ? punishmentValue : taskPoints;
+      // هنا نخصم النقاط فوراً، وتوضع في جدول آخر للنهب
+      await db.updateUser(userId, { points: currentPoints - stolenAmount });
+      // كود لتمكين الآخرين من نهبها لاحقاً...
+      break;
       case 'none':
         punishmentDescription = 'لا عقوبة';
         break;
