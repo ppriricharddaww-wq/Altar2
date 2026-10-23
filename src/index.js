@@ -134,6 +134,23 @@ async function getUserStats(params) {
   const points = user.points || 0;
   const req = calculatePointsRequired(level);
 
+  // ✅ التحقق من الحظر
+  if (user.banned_until && new Date(user.banned_until) > new Date()) {
+    return {
+      success: true,
+      banned: true,
+      bannedUntil: user.banned_until,
+      userId: user.id,
+      nickname: user.nickname,
+      level: level,
+      points: points,
+      pointsRequired: req,
+      completedTasks: user.completed_tasks ? user.completed_tasks.split(',') : [],
+      progress: 0
+    };
+  }
+
+  // ✅ المستخدم غير محظور
   return {
     success: true,
     userId: user.id,
@@ -143,8 +160,8 @@ async function getUserStats(params) {
     pointsRequired: req,
     completedTasks: user.completed_tasks ? user.completed_tasks.split(',') : [],
     progress: Math.min(100, Math.round((points / req) * 100)),
-    banned: user.banned_until && new Date(user.banned_until) > new Date(),
-    bannedUntil: user.banned_until
+    banned: false,
+    bannedUntil: null
   };
 }
 
